@@ -6,7 +6,6 @@ import { useAuthStore } from '../../modules/auth/stores/auth.js'
 import Dashboard from '../../modules/dashboard/views/Dashboard.vue'
 import Sales from '../../modules/sales/views/Sales.vue'
 import Finance from '../../modules/finance/views/Finance.vue'
-import Inventory from '../../modules/inventory/views/Inventory.vue'
 import Products from '../../modules/products/views/Products.vue'
 import Customer from '../../modules/customer/views/Customer.vue'
 import Discounts from '../../modules/customer/views/Discounts.vue'
@@ -45,16 +44,10 @@ const routes = [
         meta: { requireAuth: true, roles: ['Owner', 'Manager'] }
     },
     {
-        path: '/inventory',
-        name: 'Inventory',
-        component: Inventory,
-        meta: { requireAuth: true, roles: ['Owner', 'Inventory Manager'] }
-    },
-    {
         path: '/products',
         name: 'Products',
         component: Products,
-        meta: { requireAuth: true, roles: ['Owner', 'Inventory Manager', 'Cashier'] }
+        meta: { requireAuth: true, roles: ['Owner', 'Manager', 'Cashier'] }
     },
     {
         path: '/customer',

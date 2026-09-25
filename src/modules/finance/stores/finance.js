@@ -5,12 +5,10 @@ import { useCollection } from 'vuefire'
 import { db } from '../../../shared/lib/firebaseClient'
 import { useAuthStore } from '../../auth/stores/auth'
 import { useSalesStore } from '../../sales/stores/sales'
-import { useInventoryStore } from '../../inventory/stores/inventory'
 
 export const useFinanceStore = defineStore('finance', () => {
     const authStore = useAuthStore()
     const salesStore = useSalesStore()
-    const inventoryStore = useInventoryStore()
 
     // Manual ledger entries (custom income/expenses)
     const ledgerRef = computed(() => {
@@ -48,25 +46,6 @@ export const useFinanceStore = defineStore('finance', () => {
             }))
     )
 
-    // --- AUTO-DERIVED EXPENSE: stock-in procurement with cost > 0 ---
-    const stockExpenses = computed(() =>
-        inventoryStore.transactions
-            .filter(tx => tx.type === 'IN' && (tx.total || 0) > 0)
-            .map(tx => ({
-                id: `stock-${tx.id}`,
-                type: 'expense',
-                category: 'Procurement',
-                remarks: tx.remark || 'Stock procurement',
-                amount: tx.total || 0,
-                date: tx.date || tsToDateStr(tx.createdAt),
-                origin: 'stock_in',
-                readonly: true,
-                createdAt: tx.createdAt,
-                loggedByName: tx.loggedByName || null,
-                receiptUrl: tx.receiptUrl || null
-            }))
-    )
-
     // --- MANUAL ENTRIES from ledger ---
     const manualIncome = computed(() =>
         ledgerEntries.value
@@ -87,7 +66,7 @@ export const useFinanceStore = defineStore('finance', () => {
     )
 
     const allExpenses = computed(() =>
-        [...stockExpenses.value, ...manualExpenses.value]
+        [...manualExpenses.value]
             .sort((a, b) => toSortTime(b) - toSortTime(a))
     )
 

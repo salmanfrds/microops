@@ -714,9 +714,9 @@ const originLabel = (origin) => {
 
               <!-- Amount -->
               <div>
-                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Amount (RM)</label>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Amount (Rp)</label>
                 <div class="relative">
-                  <span class="absolute left-4 top-3.5 text-gray-400 dark:text-gray-500 font-bold">RM</span>
+                  <span class="absolute left-4 top-3.5 text-gray-400 dark:text-gray-500 font-bold">Rp</span>
                   <input v-model="form.amount" type="number" min="0" step="0.01" placeholder="0.00"
                     class="w-full pl-12 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-600 outline-none transition-all font-mono text-lg text-gray-700 dark:text-white" />
                 </div>

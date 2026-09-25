@@ -78,7 +78,7 @@ const handleClickOutside = (event) => {
     <div class="flex gap-4 items-center">
 
       <!-- Chat toggle -->
-      <button @click="emit('toggle-chat')"
+      <!-- <button @click="emit('toggle-chat')"
         class="relative w-12 h-12 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-lg border border-teal-50 dark:border-gray-700 hover:border-[#4DB6AC] dark:hover:border-teal-500 hover:shadow-xl transition-all duration-300 text-gray-600 dark:text-gray-300 hover:text-[#004D40] dark:hover:text-teal-400">
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -87,7 +87,7 @@ const handleClickOutside = (event) => {
           class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
           {{ chatStore.unreadCount > 9 ? '9+' : chatStore.unreadCount }}
         </span>
-      </button>
+      </button> -->
 
       <button @click="toggleDarkMode"
         class="w-12 h-12 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-lg border border-teal-50 dark:border-gray-700 hover:border-[#4DB6AC] dark:hover:border-teal-500 hover:shadow-xl transition-all duration-300 text-gray-600 dark:text-gray-300 hover:text-[#004D40] dark:hover:text-teal-400">

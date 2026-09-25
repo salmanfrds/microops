@@ -3,7 +3,6 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useSalesStore } from '../stores/sales'
 import CustomerDetailModal from '../../../shared/components/CustomerDetailModal.vue'
 import { useProductsStore } from '../../products/stores/products'
-import { useInventoryStore } from '../../inventory/stores/inventory'
 import { useCustomersStore } from '../../customer/stores/customers'
 import { useDiscountsStore } from '../../customer/stores/discounts'
 import { useAuthStore } from '../../auth/stores/auth'
@@ -15,15 +14,14 @@ import { db } from '../../../shared/lib/firebaseClient'
 
 const salesStore = useSalesStore()
 const productsStore = useProductsStore()
-const inventoryStore = useInventoryStore()
 const customersStore = useCustomersStore()
 const discountsStore = useDiscountsStore()
 const authStore = useAuthStore()
 const toastStore = useToastStore()
 const { fmt: fmtMoney, symbol: currencySymbol } = useCurrency()
 
-const duitnowQrUrl = ref('')
-const duitnowAccountName = ref('')
+const qrisQrUrl = ref('')
+const qrisAccountName = ref('')
 
 onMounted(async () => {
   const bizId = authStore.user?.businessId
@@ -33,8 +31,8 @@ onMounted(async () => {
     getDoc(doc(db, 'businesses', bizId, 'settings', 'products')),
   ])
   if (bizSnap.exists()) {
-    duitnowQrUrl.value = bizSnap.data().duitnowQrUrl || ''
-    duitnowAccountName.value = bizSnap.data().accountName || ''
+    qrisQrUrl.value = bizSnap.data().qrisQrUrl || bizSnap.data().duitnowQrUrl || ''
+    qrisAccountName.value = bizSnap.data().accountName || ''
   }
   if (prodSnap.exists() && Array.isArray(prodSnap.data().categories)) {
     productCategoriesSales.value = prodSnap.data().categories
@@ -80,18 +78,17 @@ const filteredOrders = computed(() => {
 // Note: VueFire sets 'id' as non-enumerable, so it must be copied explicitly after spread
 const cart = computed(() =>
   productsStore.items.map(p => {
-    const invItem = p.inventoryId ? inventoryStore.items.find(i => i.id === p.inventoryId) : null
     return {
       ...p,
       id: p.id,
       qty: cartQty.value[p.id] || 0,
       stock: getProductStock(p),
-      rentalStatus: p.type === 'Rental' ? (invItem?.rentalStatus || 'Available') : null
+      rentalStatus: p.type === 'Rental' ? (p.rentalStatus || 'Available') : null
     }
   })
 )
 
-const productTypes = ['All', 'Stocked', 'Prepared', 'Service', 'Rental']
+const productTypes = ['All', 'Service', 'Rental']
 
 const activeSalesCategoryFilters = computed(() => {
   const used = new Set(productsStore.items.map(p => p.category).filter(Boolean))
@@ -116,10 +113,8 @@ onMounted(() => { clockInterval = setInterval(() => { now.value = Date.now() }, 
 onUnmounted(() => clearInterval(clockInterval))
 
 const getProductStock = (product) => {
-  if (product.inventoryId) {
-    return inventoryStore.items.find(i => i.id === product.inventoryId)?.stock ?? 0
-  }
-  // No inventory linked — no stock cap
+  // Services are unlimited; rentals use their available units count.
+  if (product.type === 'Rental') return product.stock ?? 0
   return 9999
 }
 
@@ -184,7 +179,6 @@ const cartItems = computed(() =>
       const lineDiscountAmount = applyLineDiscount(productDiscount, rawSubtotal)
       return {
         productId: p.id,
-        inventoryId: p.inventoryId || null,
         name: p.name,
         sku: p.sku,
         qty: 1,
@@ -220,7 +214,6 @@ const cartItems = computed(() =>
     const lineDiscountAmount = applyLineDiscount(productDiscount, rawSubtotal)
     return {
       productId: p.id,
-      inventoryId: p.inventoryId || null,
       name: p.name,
       sku: p.sku,
       qty: p.qty,
@@ -316,18 +309,6 @@ watch(now, async () => {
     }
   }
 })
-
-const getStockStatusClass = (stock) => {
-  if (stock <= 0)  return 'text-red-800 dark:text-red-400 bg-red-200 dark:bg-red-900/40'
-  if (stock <= 5)  return 'text-yellow-800 dark:text-yellow-400 bg-yellow-200 dark:bg-yellow-900/40'
-  return 'text-green-800 dark:text-green-400 bg-green-200 dark:bg-green-900/40'
-}
-
-const getStockLabel = (stock) => {
-  if (stock <= 0) return 'Out of Stock'
-  if (stock <= 5) return 'Low Stock'
-  return 'In Stock'
-}
 
 const countItems = (items) => (items || []).reduce((acc, i) => acc + (i.qty || 0), 0)
 
@@ -908,16 +889,9 @@ const receiptData = computed(() => {
                       <!-- Type badge -->
                       <span class="absolute top-1.5 left-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
                         :class="{
-                          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400': product.type === 'Stocked',
-                          'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400': product.type === 'Prepared',
                           'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400': product.type === 'Service',
                           'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400': product.type === 'Rental',
                         }">{{ product.type }}</span>
-                      <!-- Out of stock overlay -->
-                      <div v-if="product.type !== 'Rental' && product.type !== 'Service' && product.type !== 'Prepared' && product.stock === 0"
-                        class="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span class="text-white text-[10px] font-bold uppercase">Out of Stock</span>
-                      </div>
                     </div>
 
                     <!-- Info + controls -->
@@ -973,19 +947,6 @@ const receiptData = computed(() => {
                           type="datetime-local"
                           class="w-full text-[10px] p-1 border border-violet-200 dark:border-violet-700 rounded bg-violet-50 dark:bg-violet-900/20 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-violet-400" />
                       </div>
-
-                      <!-- Regular +/- controls -->
-                      <div v-else class="flex items-center justify-between mt-2">
-                        <div class="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden bg-white dark:bg-gray-600">
-                          <button @click="decrement(product.id)" :disabled="(cartQty[product.id] || 0) === 0"
-                            class="w-7 h-7 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 disabled:opacity-40 text-sm font-bold">−</button>
-                          <span class="w-7 text-center text-xs font-bold text-gray-700 dark:text-gray-200">{{ cartQty[product.id] || 0 }}</span>
-                          <button @click="increment(product.id)" :disabled="(cartQty[product.id] || 0) >= product.stock"
-                            class="w-7 h-7 flex items-center justify-center hover:bg-teal-50 dark:hover:bg-teal-900/30 text-gray-500 disabled:opacity-40 text-sm font-bold">+</button>
-                        </div>
-                        <span v-if="product.inventoryId" :class="getStockStatusClass(product.stock)" class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full">{{ getStockLabel(product.stock) }}</span>
-                        <span v-else class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">Available</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -1033,7 +994,7 @@ const receiptData = computed(() => {
               <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0 space-y-3">
                 <div class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payment Method</div>
                 <div class="grid grid-cols-3 gap-1">
-                  <button v-for="method in ['Cash', 'DuitNow', 'Card']" :key="method"
+                  <button v-for="method in ['Cash', 'QRIS', 'Card']" :key="method"
                     @click="selectedPaymentMethod = method"
                     :class="selectedPaymentMethod === method ? 'bg-[#004D40] text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600'"
                     class="py-1.5 rounded-lg text-[10px] font-bold transition-all">{{ method }}</button>
@@ -1136,7 +1097,7 @@ const receiptData = computed(() => {
             </div>
           </div>
 
-          <!-- Step 2: Payment Waiting State (DuitNow / Card) -->
+          <!-- Step 2: Payment Waiting State (QRIS / Card) -->
           <div v-if="currentStep === 2" class="p-5 flex flex-col items-center justify-center flex-1 min-h-0 bg-gray-50 dark:bg-gray-900/50">
             <h4 class="text-xl font-black text-gray-800 dark:text-white tracking-tight mb-1">Awaiting Payment</h4>
             <p class="text-gray-500 dark:text-gray-400 mb-1 font-medium text-sm">
@@ -1148,14 +1109,14 @@ const receiptData = computed(() => {
             <p v-else class="mb-3"></p>
 
             <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center max-w-sm w-full">
-              <!-- DuitNow State -->
-              <template v-if="selectedPaymentMethod === 'DuitNow'">
+              <!-- QRIS State -->
+              <template v-if="selectedPaymentMethod === 'QRIS'">
                 <div class="w-52 h-52 bg-gray-50 dark:bg-gray-900 rounded-xl mb-3 p-3 flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 shrink-0">
-                  <img v-if="duitnowQrUrl" :src="duitnowQrUrl" class="w-full h-full object-contain" alt="DuitNow QR" />
+                  <img v-if="qrisQrUrl" :src="qrisQrUrl" class="w-full h-full object-contain" alt="QRIS QR" />
                   <div v-else class="text-center text-gray-400 text-sm font-bold">No QR Code uploaded</div>
                 </div>
-                <p class="text-gray-600 dark:text-gray-300 text-xs font-medium mb-1 text-center">Please ask the customer to scan the DuitNow QR above.</p>
-                <p v-if="duitnowAccountName" class="text-gray-800 dark:text-white text-sm font-bold mb-4 text-center">{{ duitnowAccountName }}</p>
+                <p class="text-gray-600 dark:text-gray-300 text-xs font-medium mb-1 text-center">Please ask the customer to scan the QRIS QR above.</p>
+                <p v-if="qrisAccountName" class="text-gray-800 dark:text-white text-sm font-bold mb-4 text-center">{{ qrisAccountName }}</p>
                 <p v-else class="mb-4"></p>
               </template>
 
@@ -1333,7 +1294,7 @@ const receiptData = computed(() => {
                     <th class="p-4 font-medium tracking-wider">Date & Time</th>
                     <th class="p-4 font-medium tracking-wider">Customer / Ref</th>
                     <th class="p-4 font-medium tracking-wider">Items</th>
-                    <th class="p-4 font-medium tracking-wider">Total (RM)</th>
+                    <th class="p-4 font-medium tracking-wider">Total (Rp)</th>
                     <th class="p-4 font-medium tracking-wider">Status</th>
                   </tr>
                 </thead>
@@ -1411,7 +1372,7 @@ const receiptData = computed(() => {
           <div>
             <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Payment Method</p>
             <div class="grid grid-cols-3 gap-2">
-              <button v-for="method in ['Cash', 'DuitNow', 'Card']" :key="method"
+              <button v-for="method in ['Cash', 'QRIS', 'Card']" :key="method"
                 @click="collectPaymentMethod = method"
                 :class="collectPaymentMethod === method ? 'bg-[#004D40] text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600'"
                 class="py-2 rounded-lg text-sm font-bold transition-all">
@@ -1420,9 +1381,9 @@ const receiptData = computed(() => {
             </div>
           </div>
 
-          <!-- DuitNow QR hint -->
-          <div v-if="collectPaymentMethod === 'DuitNow' && duitnowQrUrl" class="flex flex-col items-center">
-            <img :src="duitnowQrUrl" class="w-40 h-40 object-contain rounded-xl border border-gray-200 dark:border-gray-700" alt="DuitNow QR" />
+          <!-- QRIS QR hint -->
+          <div v-if="collectPaymentMethod === 'QRIS' && qrisQrUrl" class="flex flex-col items-center">
+            <img :src="qrisQrUrl" class="w-40 h-40 object-contain rounded-xl border border-gray-200 dark:border-gray-700" alt="QRIS QR" />
             <p class="text-xs text-gray-400 mt-2">Ask customer to scan</p>
           </div>
         </div>

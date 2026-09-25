@@ -2,34 +2,18 @@
 import { ref, computed, onMounted } from 'vue'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { useProductsStore } from '../stores/products'
-import { useInventoryStore } from '../../inventory/stores/inventory'
 import { useAuthStore } from '../../auth/stores/auth'
 import { useToastStore } from '../../../shared/stores/toast'
 import { useCurrency } from '../../../shared/composables/useCurrency'
 import { db } from '../../../shared/lib/firebaseClient'
-import { useRouter } from 'vue-router'
 
 const productsStore = useProductsStore()
-const inventoryStore = useInventoryStore()
 const authStore = useAuthStore()
 const toastStore = useToastStore()
-const router = useRouter()
 const { fmt: fmtMoney, symbol: currencySymbol } = useCurrency()
 
-const BUSINESS_TYPE_TO_PRODUCT_TYPES = {
-    retail:  ['Stocked'],
-    food:    ['Prepared'],
-    service: ['Service'],
-    rental:  ['Rental'],
-}
-
-const productTypes = computed(() => {
-    const bizTypes = authStore.user?.businessTypes || []
-    if (!bizTypes.length) return ['Stocked', 'Prepared', 'Service', 'Rental']
-    const allowed = new Set()
-    bizTypes.forEach(bt => BUSINESS_TYPE_TO_PRODUCT_TYPES[bt]?.forEach(t => allowed.add(t)))
-    return ['Stocked', 'Prepared', 'Service', 'Rental'].filter(t => allowed.has(t))
-})
+// MicroOps is scoped to service + rental products only.
+const productTypes = ['Service', 'Rental']
 
 const isViewAllModalOpen = ref(false)
 
@@ -68,16 +52,8 @@ const products = computed(() => {
     return productsStore.items.map(item => {
         let typeClass = 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
         let color = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-        
+
         switch (item.type) {
-            case 'Stocked':
-                typeClass = 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400'
-                color = 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                break
-            case 'Prepared':
-                typeClass = 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400'
-                color = 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
-                break
             case 'Service':
                 typeClass = 'bg-fuchsia-100 dark:bg-fuchsia-900/40 text-fuchsia-700 dark:text-fuchsia-400'
                 color = 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-300'
@@ -88,15 +64,8 @@ const products = computed(() => {
                 break
         }
 
-        let currentStock = item.stock || 0
-        let rentalStatus = null
-        if (item.inventoryId) {
-            const linkedInventory = inventoryStore.items.find(inv => inv.id === item.inventoryId)
-            currentStock = linkedInventory ? linkedInventory.stock : 0
-            if (item.type === 'Rental') {
-                rentalStatus = linkedInventory?.rentalStatus || 'Available'
-            }
-        }
+        const currentStock = item.stock || 0
+        const rentalStatus = item.type === 'Rental' ? (item.rentalStatus || 'Available') : null
 
         return {
             ...item,
@@ -114,13 +83,8 @@ const isAddModalOpen = ref(false)
 const isEditModalOpen = ref(false)
 const editId = ref(null)
 
-const addForm = ref({ name: '', sku: '', price: '', type: 'Stocked', category: 'General', inventoryId: '', rateUnit: 'hour', maxDuration: '', serviceDuration: '', serviceDurationUnit: 'hour', defaultNotes: '', customStatus: '', _initStock: '', _cost: '' })
-const editForm = ref({ name: '', sku: '', price: '', type: 'Stocked', category: 'General', inventoryId: '', rateUnit: 'hour', maxDuration: '', serviceDuration: '', serviceDurationUnit: 'hour', defaultNotes: '', customStatus: '', _initStock: '', _cost: '' })
-
-const linkedInventoryItem = computed(() => {
-    if (!editForm.value.inventoryId) return null
-    return inventoryStore.items.find(inv => inv.id === editForm.value.inventoryId) || null
-})
+const addForm = ref({ name: '', sku: '', price: '', type: 'Service', category: 'General', rateUnit: 'hour', maxDuration: '', serviceDuration: '', serviceDurationUnit: 'hour', defaultNotes: '', customStatus: '', stock: '' })
+const editForm = ref({ name: '', sku: '', price: '', type: 'Service', category: 'General', rateUnit: 'hour', maxDuration: '', serviceDuration: '', serviceDurationUnit: 'hour', defaultNotes: '', customStatus: '', stock: '' })
 
 const addImageFile = ref(null)
 const addImagePreview = ref('')
@@ -129,7 +93,7 @@ const editImagePreview = ref('')
 const addImageInput = ref(null)
 const editImageInput = ref(null)
 
-const DEFAULT_CATEGORIES = ['General', 'Drinks', 'Food', 'Merch']
+const DEFAULT_CATEGORIES = ['General', 'Equipment', 'Cleaning', 'Consulting']
 const productCategories = ref([...DEFAULT_CATEGORIES])
 const showAddCategoryInput = ref(false)
 const showAddCategoryInputEdit = ref(false)
@@ -177,7 +141,7 @@ const deleteCategory = async (idx, formRef) => {
 
 onMounted(loadCategories)
 
-const emptyForm = () => ({ name: '', sku: '', price: '', type: productTypes.value[0] || 'Stocked', category: 'General', inventoryId: '', rateUnit: 'hour', maxDuration: '', serviceDuration: '', serviceDurationUnit: 'hour', defaultNotes: '', customStatus: '', _initStock: '', _cost: '' })
+const emptyForm = () => ({ name: '', sku: '', price: '', type: productTypes[0], category: 'General', rateUnit: 'hour', maxDuration: '', serviceDuration: '', serviceDurationUnit: 'hour', defaultNotes: '', customStatus: '', stock: '' })
 
 const openAddModal = () => {
     addForm.value = emptyForm()
@@ -192,15 +156,15 @@ const openEditModal = (product) => {
         name: product.name || '',
         sku: product.sku || '',
         price: product.price || '',
-        type: product.type || 'Stocked',
+        type: product.type || 'Service',
         category: product.category || 'General',
-        inventoryId: product.inventoryId || '',
         rateUnit: product.rateUnit || 'hour',
         maxDuration: product.maxDuration || '',
         serviceDuration: product.serviceDuration || '',
         serviceDurationUnit: product.serviceDurationUnit || 'hour',
         defaultNotes: product.defaultNotes || '',
         customStatus: product.customStatus || '',
+        stock: product.stock ?? '',
     }
     editImageFile.value = null
     editImagePreview.value = product.imageUrl || ''
@@ -239,24 +203,16 @@ const handleEditImageUpload = (e) => {
 const handleAddProduct = async () => {
     if (!addForm.value.name || !addForm.value.type || addForm.value.price === '') return
 
-    const { _initStock, _cost, ...formData } = addForm.value
+    const formData = {
+        ...addForm.value,
+        stock: Number(addForm.value.stock) || 0,
+        ...(addForm.value.type === 'Rental' ? { rentalStatus: 'Available' } : {}),
+    }
     const imageFile = addImageFile.value
-    const needsInventory = formData.type === 'Stocked' || formData.type === 'Rental'
     closeAddModal()
 
     const tid = toastStore.loading('Adding product...')
     try {
-        if (needsInventory) {
-            const loggedBy = { name: authStore.user?.full_name, id: authStore.user?.profileId }
-            const { itemRef } = await inventoryStore.addInventoryItem({
-                name: formData.name,
-                sku: formData.sku || '',
-                stock: Number(_initStock) || 0,
-                cost: Number(_cost) || 0,
-                type: formData.type,
-            }, true, loggedBy)
-            formData.inventoryId = itemRef.id
-        }
         const docRef = await productsStore.addProduct(formData)
         if (imageFile && docRef) await productsStore.uploadProductImage(docRef.id, imageFile)
         toastStore.replace(tid, 'success', 'Product added successfully')
@@ -270,8 +226,11 @@ const handleUpdateProduct = async () => {
     if (!editId.value || !editForm.value.name || !editForm.value.type || editForm.value.price === '') return
 
     const id = editId.value
-    const { _initStock, _cost, ...rest } = editForm.value
-    const updates = { ...rest, price: Number(rest.price) || 0 }
+    const updates = {
+        ...editForm.value,
+        price: Number(editForm.value.price) || 0,
+        stock: Number(editForm.value.stock) || 0,
+    }
     const imageFile = editImageFile.value
     closeEditModal()
 
@@ -308,9 +267,9 @@ const handleDelete = async () => {
     <div>
       <header class="mb-6">
         <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Products Management</h2>
-        <p class="mt-2 text-gray-600 dark:text-gray-400 mb-4">Manage sell-able items, services, and rentals.</p>
-        
-        <button 
+        <p class="mt-2 text-gray-600 dark:text-gray-400 mb-4">Manage your services and rental items.</p>
+
+        <button
           @click="openAddModal"
           class="bg-[#004D40] dark:bg-teal-700 text-white font-bold py-2 px-6 rounded-lg shadow hover:bg-[#00695C] dark:hover:bg-teal-600 transition-colors flex items-center gap-2"
         >
@@ -334,18 +293,18 @@ const handleDelete = async () => {
               <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Product Info</th>
               <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Type</th>
               <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Price ({{ currencySymbol }})</th>
-              <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Available Stock</th>
+              <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Availability</th>
               <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
-            <tr 
-              v-for="product in tableProducts" 
-              :key="product.id" 
+            <tr
+              v-for="product in tableProducts"
+              :key="product.id"
               @click="openEditModal(product)"
               class="hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer"
             >
-              
+
               <td class="p-4">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-lg overflow-hidden shadow-sm shrink-0">
@@ -366,22 +325,20 @@ const handleDelete = async () => {
                   </div>
                 </div>
               </td>
-              
+
               <td class="p-4">
                 <span :class="product.typeClass" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border border-transparent">
                   {{ product.type }}
                 </span>
               </td>
-              
+
               <td class="p-4">
                  <div class="font-bold text-gray-800 dark:text-white text-base">{{ fmtMoney(product.price) }}</div>
               </td>
-              
+
               <td class="p-4">
                  <div class="flex items-center gap-2">
-                   <span v-if="product.type === 'Stocked'" class="font-bold text-gray-800 dark:text-white text-base">{{ product.currentStock }}</span>
-                   <span v-else-if="product.type === 'Prepared'" class="font-bold text-gray-800 dark:text-white text-xs italic opacity-80">Always In Stock</span>
-                   <span v-else-if="product.type === 'Rental'"
+                   <span v-if="product.type === 'Rental'"
                      :class="product.rentalStatus === 'Rented'
                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                        : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'"
@@ -399,7 +356,7 @@ const handleDelete = async () => {
               </td>
 
               <td class="p-4 text-right">
-                  <button 
+                  <button
                     @click.stop="openEditModal(product)"
                     class="text-[#004D40] dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 border border-transparent hover:border-teal-200 dark:hover:border-teal-800 font-bold text-xs py-1.5 px-3 rounded-lg transition-colors"
                   >
@@ -422,7 +379,7 @@ const handleDelete = async () => {
         <div @click="closeAddModal" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
         <div class="relative bg-white dark:bg-gray-800 w-full max-w-3xl rounded-lg shadow-2xl overflow-hidden animate-fade-in-up transition-colors">
             <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-teal-50 dark:bg-teal-900/20 flex justify-between items-center">
-                <h3 class="text-xl font-bold text-[#004D40] dark:text-teal-300">Add Sellable Item</h3>
+                <h3 class="text-xl font-bold text-[#004D40] dark:text-teal-300">Add Item</h3>
                 <button @click="closeAddModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold leading-none">&times;</button>
             </div>
 
@@ -479,18 +436,18 @@ const handleDelete = async () => {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                            <input v-model="addForm.name" type="text" placeholder="e.g. Premium Coffee Beans" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 dark:text-white transition-shadow">
+                            <input v-model="addForm.name" type="text" placeholder="e.g. Party Tent Rental" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 dark:text-white transition-shadow">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Status <span class="text-[10px] font-normal text-gray-400 ml-1">optional</span></label>
-                            <input v-model="addForm.customStatus" type="text" placeholder="e.g. Broken, On Hold…" class="w-full p-3 bg-white dark:bg-gray-700 border border-amber-200 dark:border-amber-800/50 rounded-lg focus:ring-2 focus:ring-amber-400 outline-none text-gray-700 dark:text-white transition-shadow text-sm">
+                            <input v-model="addForm.customStatus" type="text" placeholder="e.g. Under Repair, On Hold…" class="w-full p-3 bg-white dark:bg-gray-700 border border-amber-200 dark:border-amber-800/50 rounded-lg focus:ring-2 focus:ring-amber-400 outline-none text-gray-700 dark:text-white transition-shadow text-sm">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">SKU (Optional)</label>
-                            <input v-model="addForm.sku" type="text" placeholder="COF-001" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase text-gray-700 dark:text-white transition-shadow">
+                            <input v-model="addForm.sku" type="text" placeholder="TENT-001" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none uppercase text-gray-700 dark:text-white transition-shadow">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{{ addForm.type === 'Rental' ? `Rate (${currencySymbol})` : `Price (${currencySymbol})` }}</label>
@@ -498,17 +455,24 @@ const handleDelete = async () => {
                         </div>
                     </div>
 
-                    <div v-if="addForm.type === 'Rental'" class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Billing Unit</label>
-                            <div class="flex gap-2">
-                                <button @click="addForm.rateUnit = 'hour'" :class="addForm.rateUnit === 'hour' ? 'bg-[#004D40] dark:bg-teal-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all focus:outline-none">Per Hour</button>
-                                <button @click="addForm.rateUnit = 'day'" :class="addForm.rateUnit === 'day' ? 'bg-[#004D40] dark:bg-teal-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all focus:outline-none">Per Day</button>
+                    <div v-if="addForm.type === 'Rental'" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Billing Unit</label>
+                                <div class="flex gap-2">
+                                    <button @click="addForm.rateUnit = 'hour'" :class="addForm.rateUnit === 'hour' ? 'bg-[#004D40] dark:bg-teal-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all focus:outline-none">Per Hour</button>
+                                    <button @click="addForm.rateUnit = 'day'" :class="addForm.rateUnit === 'day' ? 'bg-[#004D40] dark:bg-teal-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all focus:outline-none">Per Day</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Max Duration ({{ addForm.rateUnit === 'hour' ? 'hrs' : 'days' }})</label>
+                                <input v-model="addForm.maxDuration" type="number" min="1" :placeholder="addForm.rateUnit === 'hour' ? 'e.g. 48' : 'e.g. 7'" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow">
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Max Duration ({{ addForm.rateUnit === 'hour' ? 'hrs' : 'days' }})</label>
-                            <input v-model="addForm.maxDuration" type="number" min="1" :placeholder="addForm.rateUnit === 'hour' ? 'e.g. 48' : 'e.g. 7'" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow">
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Units Available</label>
+                            <input v-model="addForm.stock" type="number" min="0" placeholder="0"
+                                class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow" />
                         </div>
                     </div>
 
@@ -538,23 +502,6 @@ const handleDelete = async () => {
                                 class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#4DB6AC] outline-none text-gray-700 dark:text-white resize-none text-sm transition-shadow"></textarea>
                         </div>
                     </template>
-
-                    <div v-if="addForm.type === 'Stocked' || addForm.type === 'Rental'" class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                {{ addForm.type === 'Stocked' ? 'Initial Stock (units)' : 'Units Available' }}
-                            </label>
-                            <input v-model="addForm._initStock" type="number" min="0" placeholder="0"
-                                class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                Cost / Unit ({{ currencySymbol }}) <span class="text-[10px] font-normal text-gray-400 ml-1">for asset tracking</span>
-                            </label>
-                            <input v-model="addForm._cost" type="number" min="0" placeholder="0.00"
-                                class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow" />
-                        </div>
-                    </div>
 
                     <div class="pt-2 flex gap-3">
                         <button @click="closeAddModal" class="flex-1 py-3 px-4 rounded-lg text-gray-500 dark:text-gray-300 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">Cancel</button>
@@ -590,7 +537,7 @@ const handleDelete = async () => {
         <div @click="closeEditModal" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
         <div class="relative bg-white dark:bg-gray-800 w-full max-w-3xl rounded-lg shadow-2xl overflow-hidden animate-fade-in-up transition-colors">
             <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-teal-50 dark:bg-teal-900/20 flex justify-between items-center">
-                <h3 class="text-xl font-bold text-[#004D40] dark:text-teal-300">Edit Sellable Item</h3>
+                <h3 class="text-xl font-bold text-[#004D40] dark:text-teal-300">Edit Item</h3>
                 <button @click="closeEditModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold leading-none">&times;</button>
             </div>
 
@@ -647,18 +594,18 @@ const handleDelete = async () => {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                            <input v-model="editForm.name" type="text" placeholder="e.g. Premium Coffee Beans" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow">
+                            <input v-model="editForm.name" type="text" placeholder="e.g. Party Tent Rental" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Status <span class="text-[10px] font-normal text-gray-400 ml-1">optional</span></label>
-                            <input v-model="editForm.customStatus" type="text" placeholder="e.g. Broken, On Hold…" class="w-full p-3 bg-white dark:bg-gray-700 border border-amber-200 dark:border-amber-800/50 rounded-lg focus:ring-2 focus:ring-amber-400 outline-none text-gray-700 dark:text-white transition-shadow text-sm">
+                            <input v-model="editForm.customStatus" type="text" placeholder="e.g. Under Repair, On Hold…" class="w-full p-3 bg-white dark:bg-gray-700 border border-amber-200 dark:border-amber-800/50 rounded-lg focus:ring-2 focus:ring-amber-400 outline-none text-gray-700 dark:text-white transition-shadow text-sm">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">SKU (Optional)</label>
-                            <input v-model="editForm.sku" type="text" placeholder="COF-001" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none uppercase text-gray-700 dark:text-white transition-shadow">
+                            <input v-model="editForm.sku" type="text" placeholder="TENT-001" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none uppercase text-gray-700 dark:text-white transition-shadow">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{{ editForm.type === 'Rental' ? `Rate (${currencySymbol})` : `Price (${currencySymbol})` }}</label>
@@ -666,46 +613,24 @@ const handleDelete = async () => {
                         </div>
                     </div>
 
-                    <div v-if="editForm.type === 'Rental'" class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Billing Unit</label>
-                            <div class="flex gap-2">
-                                <button @click="editForm.rateUnit = 'hour'" :class="editForm.rateUnit === 'hour' ? 'bg-[#004D40] dark:bg-teal-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all focus:outline-none">Per Hour</button>
-                                <button @click="editForm.rateUnit = 'day'" :class="editForm.rateUnit === 'day' ? 'bg-[#004D40] dark:bg-teal-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all focus:outline-none">Per Day</button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Max Duration ({{ editForm.rateUnit === 'hour' ? 'hrs' : 'days' }})</label>
-                            <input v-model="editForm.maxDuration" type="number" min="1" :placeholder="editForm.rateUnit === 'hour' ? 'e.g. 48' : 'e.g. 7'" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow">
-                        </div>
-                    </div>
-
-                    <div v-if="editForm.type === 'Stocked' || editForm.type === 'Rental'">
-                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Stock</label>
-                        <!-- Already linked: show live stock + manage link -->
-                        <div v-if="editForm.inventoryId" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div v-if="editForm.type === 'Rental'" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Current Stock</p>
-                                <p class="font-bold text-gray-800 dark:text-white text-lg leading-none">
-                                    {{ linkedInventoryItem?.stock ?? '—' }}
-                                    <span v-if="editForm.type === 'Rental' && linkedInventoryItem?.rentalStatus"
-                                        :class="linkedInventoryItem.rentalStatus === 'Available' ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'"
-                                        class="text-xs font-bold ml-2">{{ linkedInventoryItem.rentalStatus }}</span>
-                                </p>
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Billing Unit</label>
+                                <div class="flex gap-2">
+                                    <button @click="editForm.rateUnit = 'hour'" :class="editForm.rateUnit === 'hour' ? 'bg-[#004D40] dark:bg-teal-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all focus:outline-none">Per Hour</button>
+                                    <button @click="editForm.rateUnit = 'day'" :class="editForm.rateUnit === 'day' ? 'bg-[#004D40] dark:bg-teal-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all focus:outline-none">Per Day</button>
+                                </div>
                             </div>
-                            <button type="button" @click="closeEditModal(); router.push('/inventory')"
-                                class="flex items-center gap-1 text-xs font-bold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors">
-                                Manage Stock
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                            </button>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Max Duration ({{ editForm.rateUnit === 'hour' ? 'hrs' : 'days' }})</label>
+                                <input v-model="editForm.maxDuration" type="number" min="1" :placeholder="editForm.rateUnit === 'hour' ? 'e.g. 48' : 'e.g. 7'" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow">
+                            </div>
                         </div>
-                        <!-- Not yet linked (old product migration): show dropdown -->
-                        <div v-else>
-                            <select v-model="editForm.inventoryId" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 dark:text-white transition-shadow appearance-none">
-                                <option value="" disabled>-- Select Inventory --</option>
-                                <option v-for="inv in inventoryStore.items" :key="inv.id" :value="inv.id">{{ inv.name }}</option>
-                            </select>
-                            <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">This product was created before auto-linking. Select the matching inventory item.</p>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Units Available</label>
+                            <input v-model="editForm.stock" type="number" min="0" placeholder="0"
+                                class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#004D40] outline-none text-gray-700 dark:text-white transition-shadow" />
                         </div>
                     </div>
 
@@ -776,7 +701,7 @@ const handleDelete = async () => {
           <div class="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center shrink-0">
             <div>
               <h3 class="text-xl font-bold text-gray-800 dark:text-white">All Products</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Showing all sell-able items, services, and rentals.</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Showing all services and rental items.</p>
             </div>
             <button @click="isViewAllModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-3xl font-bold leading-none">&times;</button>
           </div>
@@ -789,8 +714,6 @@ const handleDelete = async () => {
               </div>
               <select v-model="typeFilter" class="text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors">
                 <option value="">All Types</option>
-                <option value="Stocked">Stocked</option>
-                <option value="Prepared">Prepared</option>
                 <option value="Service">Service</option>
                 <option value="Rental">Rental</option>
               </select>
@@ -806,7 +729,7 @@ const handleDelete = async () => {
                 class="px-3 py-1 rounded-full text-xs font-bold transition-colors">{{ cat }}</button>
             </div>
           </div>
-          
+
           <div class="flex-1 overflow-auto p-6">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
               <table class="w-full text-left border-collapse">
@@ -815,7 +738,7 @@ const handleDelete = async () => {
                     <th class="p-4 text-xs font-bold uppercase tracking-wider">Product Info</th>
                     <th class="p-4 text-xs font-bold uppercase tracking-wider">Type</th>
                     <th class="p-4 text-xs font-bold uppercase tracking-wider">Price ({{ currencySymbol }})</th>
-                    <th class="p-4 text-xs font-bold uppercase tracking-wider">Available Stock</th>
+                    <th class="p-4 text-xs font-bold uppercase tracking-wider">Availability</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50 dark:divide-gray-700 align-top">
@@ -857,11 +780,7 @@ const handleDelete = async () => {
                     <td class="p-4">
                       <div v-if="item.type === 'Service'" class="text-gray-400 dark:text-gray-500 text-sm italic">—</div>
                       <div v-else class="flex flex-col gap-1 items-start">
-                         <div class="flex items-center gap-2">
-                           <span class="font-bold text-gray-800 dark:text-white text-base">{{ item.currentStock }}</span>
-                           <span class="text-xs text-gray-400 dark:text-gray-500">units</span>
-                         </div>
-                         <span v-if="item.type === 'Rental' && item.rentalStatus" 
+                         <span v-if="item.type === 'Rental' && item.rentalStatus"
                             :class="item.rentalStatus === 'Available' ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20'"
                             class="px-2 py-0.5 text-[10px] font-bold uppercase rounded border border-transparent inline-flex items-center gap-1"
                          >

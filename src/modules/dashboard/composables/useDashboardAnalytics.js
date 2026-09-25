@@ -2,13 +2,11 @@ import { computed } from 'vue'
 import { useSalesStore } from '../../sales/stores/sales'
 import { useCustomersStore } from '../../customer/stores/customers'
 import { useFinanceStore } from '../../finance/stores/finance'
-import { useInventoryStore } from '../../inventory/stores/inventory'
 
 export function useDashboardAnalytics() {
     const salesStore = useSalesStore()
     const customersStore = useCustomersStore()
     const financeStore = useFinanceStore()
-    const inventoryStore = useInventoryStore()
 
     const toDate = (ts) => {
         if (!ts) return null
@@ -29,14 +27,6 @@ export function useDashboardAnalytics() {
 
     // ─── KPI 3: Total Orders ──────────────────────────────────────────
     const totalOrders = computed(() => salesStore.orders.length)
-
-    // ─── KPI 4: Low Stock Alerts (stock < 10 and > 0) ────────────────
-    const lowStockCount = computed(() =>
-        inventoryStore.items.filter(i => i.stock > 0 && i.stock < 10).length
-    )
-    const outOfStockCount = computed(() =>
-        inventoryStore.items.filter(i => i.stock === 0).length
-    )
 
     // (keep for backwards compat)
     const openOrders = computed(() =>
@@ -132,22 +122,7 @@ export function useDashboardAnalytics() {
         return { labels: statuses, data: counts }
     })
 
-    // ─── CHART 5: Top 8 Inventory Items by Stock ──────────────────────
-    const inventoryStockData = computed(() => {
-        const items = [...inventoryStore.items]
-            .filter(i => i.name)
-            .sort((a, b) => (b.stock || 0) - (a.stock || 0))
-            .slice(0, 8)
-        return {
-            labels: items.map(i => i.name),
-            data: items.map(i => i.stock || 0),
-            colors: items.map(i => {
-                if (i.stock === 0) return '#ef4444'
-                if (i.stock < 10) return '#f59e0b'
-                return '#059669'
-            })
-        }
-    })
+    // ─── CHART 5: removed (inventory deleted) ─────────────────────────
 
     // (kept for backwards compat)
     const salesByMonthData = computed(() => ({
@@ -174,8 +149,6 @@ export function useDashboardAnalytics() {
         totalRevenue,
         netProfit,
         totalOrders,
-        lowStockCount,
-        outOfStockCount,
         openOrders,
         newCustomersThisMonth,
         // Charts
@@ -183,7 +156,6 @@ export function useDashboardAnalytics() {
         dailySalesTrendData,
         salesByProductData,
         orderStatusData,
-        inventoryStockData,
         // backwards compat
         salesByMonthData,
         weeklyOrdersData,

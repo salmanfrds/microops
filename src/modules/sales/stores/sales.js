@@ -4,11 +4,9 @@ import { collection, addDoc, doc, updateDoc, serverTimestamp, Timestamp } from '
 import { useCollection } from 'vuefire'
 import { db } from '../../../shared/lib/firebaseClient'
 import { useAuthStore } from '../../auth/stores/auth'
-import { useInventoryStore } from '../../inventory/stores/inventory'
 
 export const useSalesStore = defineStore('sales', () => {
     const authStore = useAuthStore()
-    const inventoryStore = useInventoryStore()
 
     const ordersRef = computed(() => {
         const bizId = authStore.user?.businessId
@@ -75,10 +73,8 @@ export const useSalesStore = defineStore('sales', () => {
         })
 
         for (const item of items) {
-            if (item.isRental && item.inventoryId) {
-                await inventoryStore.setRentalStatus(item.inventoryId, 'Rented')
-            } else if (item.inventoryId) {
-                await inventoryStore.adjustStock(item.inventoryId, 'OUT', item.qty, 0, `Sale ${orderNumber}`)
+            if (item.isRental && item.productId) {
+                await updateDoc(doc(db, `businesses/${bizId}/products`, item.productId), { rentalStatus: 'Rented' })
             }
         }
     }
@@ -92,8 +88,8 @@ export const useSalesStore = defineStore('sales', () => {
         })
         // Item is physically back — mark available regardless of payment status
         for (const item of items) {
-            if (item.isRental && item.inventoryId) {
-                await inventoryStore.setRentalStatus(item.inventoryId, 'Available')
+            if (item.isRental && item.productId) {
+                await updateDoc(doc(db, `businesses/${bizId}/products`, item.productId), { rentalStatus: 'Available' })
             }
         }
     }

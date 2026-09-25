@@ -81,7 +81,6 @@ const avatarColor = (role = '') => {
     Owner: 'bg-teal-500',
     Manager: 'bg-blue-500',
     Cashier: 'bg-orange-500',
-    'Inventory Manager': 'bg-purple-500',
   }
   return map[role] || 'bg-gray-500'
 }

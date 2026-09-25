@@ -5,32 +5,17 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import { db, storage } from '../../../shared/lib/firebaseClient'
 import { useAuthStore } from '../../auth/stores/auth'
 import { useToastStore } from '../../../shared/stores/toast'
-import { useCurrencyStore, CURRENCY_CONFIG } from '../../../shared/stores/currency'
 
 const authStore = useAuthStore()
 const toastStore = useToastStore()
-const currencyStore = useCurrencyStore()
 
 const business = ref({
   name: '', address: '', phone: '', website: '',
-  bankName: '', accountNumber: '', accountName: '', duitnowId: '',
-  logoUrl: '', duitnowQrUrl: ''
+  bankName: '', accountNumber: '', accountName: '', qrisId: '',
+  logoUrl: '', qrisQrUrl: ''
 })
 
-const BUSINESS_TYPES = [
-  { id: 'retail',  label: 'Retail / Shop',      desc: 'Sell physical products from stock',                    productTypes: ['Stocked']  },
-  { id: 'food',    label: 'Food & Beverage',     desc: 'Prepare and sell meals, drinks or baked goods',        productTypes: ['Prepared'] },
-  { id: 'service', label: 'Service Provider',    desc: 'Offer professional services (cleaning, repair, etc.)', productTypes: ['Service']  },
-  { id: 'rental',  label: 'Rental Business',     desc: 'Rent out items, equipment or assets',                  productTypes: ['Rental']   },
-]
-const businessTypes = ref([])
-const currency = ref('RM')
 const savedName = ref('')
-
-const CURRENCIES = [
-  { id: 'MYR', label: 'RM — Malaysian Ringgit', example: 'RM 10.00' },
-  { id: 'IDR', label: 'Rp — Indonesian Rupiah',  example: 'Rp 150.000' },
-]
 
 
 
@@ -42,7 +27,7 @@ const saving = ref(false)
 
 // --- STAFF ---
 const staff = ref([])
-const roles = ['Owner', 'Manager', 'Cashier', 'Inventory Manager']
+const roles = ['Owner', 'Manager', 'Cashier']
 const isAddStaffModalOpen = ref(false)
 const newStaff = ref({ full_name: '', role: 'Cashier', pin: '' })
 
@@ -67,15 +52,13 @@ const loadProfile = async () => {
         bankName: data.bankName || '',
         accountNumber: data.accountNumber || '',
         accountName: data.accountName || '',
-        duitnowId: data.duitnowId || '',
+        qrisId: data.qrisId || data.duitnowId || '',
         logoUrl: data.logoUrl || '',
-        duitnowQrUrl: data.duitnowQrUrl || ''
+        qrisQrUrl: data.qrisQrUrl || data.duitnowQrUrl || ''
       }
       logoPreview.value = data.logoUrl || ''
-      qrPreview.value = data.duitnowQrUrl || ''
+      qrPreview.value = data.qrisQrUrl || data.duitnowQrUrl || ''
       savedName.value = data.name || ''
-      businessTypes.value = data.businessTypes || []
-      currency.value = data.currency || 'RM'
     }
   } catch (err) {
     console.error('Error loading business profile:', err)
@@ -98,13 +81,10 @@ const saveProfile = async () => {
       bankName: business.value.bankName,
       accountNumber: business.value.accountNumber,
       accountName: business.value.accountName,
-      duitnowId: business.value.duitnowId,
+      qrisId: business.value.qrisId,
       logoUrl: business.value.logoUrl,
-      duitnowQrUrl: business.value.duitnowQrUrl,
-      businessTypes: businessTypes.value,
-      currency: currency.value
+      qrisQrUrl: business.value.qrisQrUrl,
     }, { merge: true })
-    authStore.setUser({ ...authStore.user, businessTypes: businessTypes.value, currency: currency.value })
     success = true
   } catch (err) {
     console.error('Error saving profile:', err)
@@ -174,7 +154,7 @@ const handleLogoUpload = async (event) => {
   }
 }
 
-// --- DUITNOW QR UPLOAD ---
+// --- QRIS QR UPLOAD ---
 const handleQrUpload = async (event) => {
   const raw = event.target.files[0]
   if (!raw) return
@@ -186,14 +166,14 @@ const handleQrUpload = async (event) => {
   try {
     qrPreview.value = URL.createObjectURL(raw)
     const file = await compressImage(raw, 1024, 0.9)
-    const url = await uploadImage(file, `business/${uid}/profile/duitnow_qr.jpg`)
-    business.value.duitnowQrUrl = url
+    const url = await uploadImage(file, `business/${uid}/profile/qris_qr.jpg`)
+    business.value.qrisQrUrl = url
     qrPreview.value = url
-    await setDoc(doc(db, 'businesses', uid), { duitnowQrUrl: url }, { merge: true })
+    await setDoc(doc(db, 'businesses', uid), { qrisQrUrl: url }, { merge: true })
     success = true
   } catch (err) {
     console.error('QR upload failed:', err)
-    qrPreview.value = business.value.duitnowQrUrl
+    qrPreview.value = business.value.qrisQrUrl
   } finally {
     qrUploading.value = false
     if (success) {
@@ -349,7 +329,7 @@ onMounted(async () => {
 
         <!-- Payment Details -->
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Payment Details (DuitNow)</h3>
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Payment Details (QRIS)</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Bank Name</label>
@@ -377,23 +357,23 @@ onMounted(async () => {
                 class="w-full p-2 bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-[#4DB6AC] outline-none text-gray-800 dark:text-white placeholder-gray-400 transition-colors" />
             </div>
             <div class="md:col-span-2">
-              <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">DuitNow ID (Mobile / NRIC / BRN)</label>
-              <input v-model="business.duitnowId" type="text"
+              <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">QRIS ID</label>
+              <input v-model="business.qrisId" type="text"
                 class="w-full p-2 bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-[#4DB6AC] outline-none text-gray-800 dark:text-white transition-colors" />
             </div>
           </div>
         </div>
       </div>
 
-      <!-- DuitNow QR Upload -->
+      <!-- QRIS QR Upload -->
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center transition-colors">
-        <h4 class="font-bold text-gray-700 dark:text-white mb-4">DuitNow QR Code</h4>
+        <h4 class="font-bold text-gray-700 dark:text-white mb-4">QRIS QR Code</h4>
 
         <div class="group w-full">
           <button type="button" @click="qrInput.click()"
             class="w-full aspect-square max-w-50 mx-auto bg-gray-50 dark:bg-gray-700/30 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden hover:border-[#4DB6AC] dark:hover:border-teal-400 transition-all cursor-pointer">
 
-            <img v-if="qrPreview" :src="qrPreview" class="absolute inset-0 w-full h-full object-contain p-2" alt="DuitNow QR" />
+            <img v-if="qrPreview" :src="qrPreview" class="absolute inset-0 w-full h-full object-contain p-2" alt="QRIS QR" />
 
             <div v-if="qrUploading" class="absolute inset-0 bg-black/40 flex items-center justify-center rounded-2xl pointer-events-none">
               <svg class="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
@@ -418,87 +398,6 @@ onMounted(async () => {
 
         <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-4 leading-relaxed px-2">
           This QR will be displayed on digital invoices for customers to scan and pay.
-        </p>
-      </div>
-    </div>
-
-    <!-- Business Types -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-colors mb-8">
-      <div class="mb-5">
-        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Business Type</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Controls which product types are available when creating products.</p>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <button v-for="bt in BUSINESS_TYPES" :key="bt.id"
-          type="button"
-          @click="businessTypes.includes(bt.id) ? businessTypes.splice(businessTypes.indexOf(bt.id), 1) : businessTypes.push(bt.id)"
-          :class="businessTypes.includes(bt.id)
-            ? 'border-[#004D40] dark:border-teal-400 bg-teal-50 dark:bg-teal-900/20 ring-2 ring-[#004D40]/20 dark:ring-teal-400/20'
-            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/40 hover:border-teal-300 dark:hover:border-teal-700'"
-          class="flex flex-col items-start gap-2 p-4 rounded-xl border-2 text-left transition-all">
-
-          <div class="flex items-center gap-2 w-full">
-            <div :class="businessTypes.includes(bt.id)
-                ? 'bg-[#004D40] dark:bg-teal-500 border-[#004D40] dark:border-teal-500'
-                : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-500'"
-              class="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors">
-              <svg v-if="businessTypes.includes(bt.id)" class="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p class="font-bold text-gray-800 dark:text-white text-sm">{{ bt.label }}</p>
-          </div>
-
-          <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{{ bt.desc }}</p>
-
-          <div class="flex flex-wrap gap-1">
-            <span v-for="pt in bt.productTypes" :key="pt"
-              class="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-300 tracking-wider">
-              {{ pt }}
-            </span>
-          </div>
-        </button>
-      </div>
-    </div>
-
-    <!-- Currency -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors mb-8">
-      <div class="p-6 border-b border-gray-100 dark:border-gray-700">
-        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">Currency</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Selecting the other currency switches to a converted display view. Your stored data stays in the base currency.
-        </p>
-      </div>
-      <div class="p-6 grid grid-cols-2 gap-3">
-        <button v-for="c in CURRENCIES" :key="c.id"
-          type="button"
-          @click="c.id === currency ? currencyStore.requestSwitch(currency) : currencyStore.requestSwitch(c.id)"
-          :class="currencyStore.effectiveCurrency === c.id
-            ? 'border-[#004D40] dark:border-teal-400 bg-teal-50 dark:bg-teal-900/20 ring-2 ring-[#004D40]/20 dark:ring-teal-400/20'
-            : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/40 hover:border-teal-300 dark:hover:border-teal-700'"
-          class="relative flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all">
-
-          <!-- Base currency badge -->
-          <span v-if="c.id === currency"
-            class="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-[#004D40] dark:bg-teal-700 text-white">
-            Base
-          </span>
-
-          <div :class="currencyStore.effectiveCurrency === c.id
-              ? 'bg-[#004D40] dark:bg-teal-500 border-[#004D40] dark:border-teal-500'
-              : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-500'"
-            class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors">
-            <div v-if="currencyStore.effectiveCurrency === c.id" class="w-2 h-2 rounded-full bg-white"></div>
-          </div>
-          <div>
-            <p class="font-bold text-gray-800 dark:text-white text-sm">{{ c.label }}</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">e.g. {{ c.example }}</p>
-          </div>
-        </button>
-      </div>
-      <div v-if="currencyStore.isConverting" class="px-6 pb-4">
-        <p class="text-xs text-amber-600 dark:text-amber-400 font-medium">
-          Showing converted values (~1 {{ CURRENCY_CONFIG[currency]?.symbol }} = {{ currency === 'MYR' ? '3,600' : '0.00028' }} {{ CURRENCY_CONFIG[currencyStore.effectiveCurrency]?.symbol }}). Stored data is unchanged.
         </p>
       </div>
     </div>

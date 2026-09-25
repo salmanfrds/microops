@@ -62,16 +62,12 @@ const verifyPin = async () => {
     const bizId = getAuth(firebaseApp).currentUser.uid
 
     let onboardingCompleted = true
-    let businessTypes = []
-    let currency = 'RM'
 
     try {
       const bizSnap = await getDoc(doc(db, 'businesses', bizId))
       if (bizSnap.exists()) {
-        currency = bizSnap.data().currency || 'RM'
         if (selectedProfile.value.role === 'Owner') {
           onboardingCompleted = bizSnap.data().onboardingCompleted ?? true
-          businessTypes = bizSnap.data().businessTypes || []
         }
       }
     } catch (err) {
@@ -84,15 +80,14 @@ const verifyPin = async () => {
       profileId: selectedProfile.value.id,
       email: getAuth(firebaseApp).currentUser.email,
       onboardingCompleted,
-      businessTypes,
-      currency,
+      businessTypes: ['service', 'rental'],
+      currency: 'IDR',
     })
 
     const roleDefaultRoute = {
       'Owner':             '/',
       'Manager':           '/',
       'Cashier':           '/sales',
-      'Inventory Manager': '/inventory',
     }
     const defaultRoute = roleDefaultRoute[selectedProfile.value.role] ?? '/'
 

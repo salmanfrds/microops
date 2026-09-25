@@ -5,9 +5,9 @@ import { useDashboardAnalytics } from '../composables/useDashboardAnalytics'
 import { useCurrency } from '../../../shared/composables/useCurrency'
 
 const {
-  totalRevenue, netProfit, totalOrders, lowStockCount, outOfStockCount,
+  totalRevenue, netProfit, totalOrders,
   revenueVsExpensesData, dailySalesTrendData, salesByProductData,
-  orderStatusData, inventoryStockData,
+  orderStatusData,
   newCustomersThisMonth,
 } = useDashboardAnalytics()
 
@@ -16,10 +16,9 @@ const revExpCanvas   = ref(null)
 const trendCanvas    = ref(null)
 const productCanvas  = ref(null)
 const statusCanvas   = ref(null)
-const stockCanvas    = ref(null)
 
 let revExpChart = null, trendChart = null, productChart = null,
-    statusChart = null, stockChart  = null, observer = null
+    statusChart = null, observer = null
 
 const { symbol: currencySymbol, fmt: fmtCurrency } = useCurrency()
 
@@ -49,7 +48,7 @@ const initCharts = () => {
   }
   const baseLegend = { labels: { color: c.text, usePointStyle: true, pointStyleWidth: 8 } }
 
-  ;[revExpChart, trendChart, productChart, statusChart, stockChart].forEach(ch => ch?.destroy())
+  ;[revExpChart, trendChart, productChart, statusChart].forEach(ch => ch?.destroy())
 
   // 1. Revenue vs Expenses — grouped bar
   if (revExpCanvas.value) {
@@ -89,7 +88,7 @@ const initCharts = () => {
       data: {
         labels: d.labels,
         datasets: [{
-          label: 'Sales (RM)',
+          label: 'Sales (Rp)',
           data: d.data,
           borderColor: '#0d9488',
           backgroundColor: 'rgba(13,148,136,0.12)',
@@ -157,32 +156,6 @@ const initCharts = () => {
       }
     })
   }
-
-  // 5. Inventory Stock — horizontal bar
-  if (stockCanvas.value) {
-    const d = inventoryStockData.value
-    stockChart = new Chart(stockCanvas.value, {
-      type: 'bar',
-      data: {
-        labels: d.labels,
-        datasets: [{
-          label: 'Stock',
-          data: d.data,
-          backgroundColor: d.colors,
-          borderRadius: 4,
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { beginAtZero: true, grid: { color: c.grid }, ticks: { color: c.text } },
-          y: { grid: { display: false }, ticks: { color: c.text } }
-        }
-      }
-    })
-  }
 }
 
 const updateAll = () => {
@@ -210,19 +183,12 @@ const updateAll = () => {
     statusChart.data.datasets[0].data = d4.data
     statusChart.update()
   }
-  const d5 = inventoryStockData.value
-  if (stockChart) {
-    stockChart.data.labels = d5.labels
-    stockChart.data.datasets[0].data = d5.data
-    stockChart.data.datasets[0].backgroundColor = d5.colors
-    stockChart.update()
-  }
 }
 
 onMounted(() => {
   initCharts()
   watch(
-    [revenueVsExpensesData, dailySalesTrendData, salesByProductData, orderStatusData, inventoryStockData],
+    [revenueVsExpensesData, dailySalesTrendData, salesByProductData, orderStatusData],
     updateAll, { deep: true }
   )
   observer = new MutationObserver(initCharts)
@@ -231,7 +197,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   observer?.disconnect()
-  ;[revExpChart, trendChart, productChart, statusChart, stockChart].forEach(c => c?.destroy())
+  ;[revExpChart, trendChart, productChart, statusChart].forEach(c => c?.destroy())
 })
 </script>
 
@@ -245,7 +211,7 @@ onUnmounted(() => {
     </header>
 
     <!-- ── KPI Cards ──────────────────────────────────────────────── -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
       <!-- Total Revenue -->
       <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 flex flex-col gap-3">
@@ -276,18 +242,6 @@ onUnmounted(() => {
           <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">All time orders</p>
         </div>
       </div>
-
-      <!-- Stock Alerts -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 flex flex-col gap-3">
-        <span class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Stock Alerts</span>
-        <div>
-          <p class="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">{{ lowStockCount + outOfStockCount }}</p>
-          <div class="flex items-center gap-3 mt-1">
-            <span class="text-xs text-amber-500 font-semibold">{{ lowStockCount }} low</span>
-            <span class="text-xs text-red-500 font-semibold">{{ outOfStockCount }} out</span>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- ── Charts Row 1: Revenue vs Expenses + Daily Trend ────────── -->
@@ -316,8 +270,8 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- ── Charts Row 2: Products + Order Status + Stock ─────────── -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <!-- ── Charts Row 2: Products + Order Status ─────────── -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
       <!-- Top Products donut -->
       <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
@@ -338,24 +292,6 @@ onUnmounted(() => {
         </div>
         <div class="relative h-60">
           <canvas ref="statusCanvas"></canvas>
-        </div>
-      </div>
-
-      <!-- Inventory Stock horizontal bar -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 md:col-span-2 lg:col-span-1">
-        <div class="mb-4 flex items-start justify-between">
-          <div>
-            <h3 class="text-base font-bold text-gray-800 dark:text-white">Inventory Levels</h3>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Top 8 items by stock</p>
-          </div>
-          <div class="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wide shrink-0">
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>OK</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Low</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Out</span>
-          </div>
-        </div>
-        <div class="relative h-60">
-          <canvas ref="stockCanvas"></canvas>
         </div>
       </div>
     </div>

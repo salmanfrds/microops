@@ -99,8 +99,8 @@ export function useAuth() {
           owner_email: email,
           created_at: new Date().toISOString(),
           onboardingCompleted: false,
-          businessTypes: [],
-          currency: 'MYR'
+          businessTypes: ['service', 'rental'],
+          currency: 'IDR'
         })
 
         // The sub-collection 'profiles' represents the Netflix-style users (Owner, Staff)
@@ -122,8 +122,8 @@ export function useAuth() {
           profileId: 'owner',
           email,
           onboardingCompleted: false,
-          businessTypes: [],
-          currency: 'MYR',
+          businessTypes: ['service', 'rental'],
+          currency: 'IDR',
         })
         router.push('/onboarding')
       }
