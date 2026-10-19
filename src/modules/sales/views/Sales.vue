@@ -332,6 +332,12 @@ const remainingBalance = computed(() => finalTotal.value - amountDueNow.value)
 const settlingOrderId = ref(null)
 const detailCustomerId = ref(null)
 
+const handleCustomerClick = (event, order) => {
+  if (!order.customerId) return
+  event.stopPropagation()
+  detailCustomerId.value = order.customerId
+}
+
 // --- COLLECT FINAL PAYMENT (rental return due) ---
 const collectOrder = ref(null)
 const collectPaymentMethod = ref('Cash')
@@ -693,11 +699,11 @@ const receiptData = computed(() => {
 </script>
 
 <template>
-  <section class="space-y-12">
+  <section class="space-y-8 compact-text">
     <header class="mb-6">
       <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Sales & Order Management</h2>
       <p class="mt-2 text-gray-600 dark:text-gray-400 mb-4">Track customer orders from quotation to final invoice.</p>
-      
+
       <button @click="openNewOrderModal"
         class="bg-[#004D40] dark:bg-teal-700 hover:bg-[#00695C] dark:hover:bg-teal-600 text-white font-bold py-2 px-6 rounded-lg shadow transition-colors flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -713,32 +719,38 @@ const receiptData = computed(() => {
       <span @click="isViewAllModalOpen = true" class="text-xs font-bold text-[#4DB6AC] dark:text-teal-400 cursor-pointer hover:underline">View All Orders</span>
     </div>
 
-    
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm overflow-x-auto border border-gray-100 dark:border-gray-700 transition-colors">
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto border border-gray-100 dark:border-gray-700 transition-colors">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="border-b border-gray-100 dark:border-gray-700">
-            <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Order Details</th>
-            <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Customer</th>
+            <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+              <span class="lg:hidden">ID</span>
+              <span class="hidden lg:inline">Order Details</span>
+            </th>
+            <th class="hidden lg:table-cell p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Customer</th>
+            <th class="lg:hidden p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Price</th>
             <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</th>
-            <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-right">Total</th>
-            <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-center">Receipt</th>
+            <th class="hidden lg:table-cell p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-right">Total</th>
+            <th class="hidden lg:table-cell p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-center">Receipt</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
           <tr v-if="tableOrders.length === 0">
-            <td colspan="5" class="p-8 text-center text-gray-400 dark:text-gray-500">No orders yet. Create your first order!</td>
+            <td colspan="3" class="p-8 text-center text-gray-400 dark:text-gray-500 lg:hidden">No orders yet. Create your first order!</td>
+            <td colspan="5" class="hidden lg:table-cell p-8 text-center text-gray-400 dark:text-gray-500">No orders yet. Create your first order!</td>
           </tr>
           <tr v-for="order in tableOrders" :key="order.id"
-            class="hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-colors">
+            @click="viewReceipt(order)"
+            class="hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-colors cursor-pointer">
             <td class="p-4">
               <div class="font-bold text-gray-800 dark:text-gray-200 font-mono">{{ order.orderNumber }}</div>
-              <div class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ formatDate(order.createdAt) }}</div>
+              <div class="hidden lg:block text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ formatDate(order.createdAt) }}</div>
             </td>
-            <td class="p-4">
+            <td class="hidden lg:table-cell p-4">
               <div class="flex items-center gap-3"
                 :class="order.customerId ? 'cursor-pointer group/cust' : ''"
-                @click="order.customerId ? detailCustomerId = order.customerId : null">
+                @click="handleCustomerClick($event, order)">
                 <div :class="[getAvatarColor(order.customerName), 'w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm']">
                   {{ getInitials(order.customerName) || '?' }}
                 </div>
@@ -747,9 +759,12 @@ const receiptData = computed(() => {
                     :class="order.customerId ? 'group-hover/cust:text-teal-600 dark:group-hover/cust:text-teal-400 transition-colors' : ''">
                     {{ order.customerName || 'Walk-in Customer' }}
                   </div>
-                  <div class="text-xs text-gray-500 dark:text-gray-400">{{ countItems(order.items) }} item(s)</div>
+                  <div class="hidden lg:block text-xs text-gray-500 dark:text-gray-400">{{ countItems(order.items) }} item(s)</div>
                 </div>
               </div>
+            </td>
+            <td class="lg:hidden p-4">
+              <div class="font-bold text-gray-800 dark:text-gray-200">{{ fmtMoney(order.total) }}</div>
             </td>
             <td class="p-4">
               <div class="flex flex-col items-start gap-1">
@@ -771,13 +786,13 @@ const receiptData = computed(() => {
                 </span>
               </div>
             </td>
-            <td class="p-4 text-right">
+            <td class="hidden lg:table-cell p-4 text-right">
               <div class="font-bold text-gray-800 dark:text-gray-200">{{ fmtMoney(order.total) }}</div>
             </td>
-            <td class="p-4 text-center">
+            <td class="hidden lg:table-cell p-4 text-center">
               <div class="flex items-center justify-center gap-1">
                 <button v-if="order.hasServices && (order.status === 'Scheduled' || order.status === 'In Progress')"
-                  @click="handleAdvanceService(order)"
+                  @click.stop="handleAdvanceService(order)"
                   :class="order.status === 'Scheduled'
                     ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 hover:bg-violet-200'
                     : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 hover:bg-orange-200'"
@@ -787,20 +802,20 @@ const receiptData = computed(() => {
                 </button>
                 <!-- Collect final payment for rental return-due orders -->
                 <button v-if="order.status === 'Return Due'"
-                  @click="openCollectPayment(order)"
+                  @click.stop="openCollectPayment(order)"
                   class="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white transition-colors"
                   title="Collect remaining balance">
                   Collect
                 </button>
                 <!-- Settle for non-rental partial orders -->
                 <button v-else-if="order.paymentStatus === 'Partial'"
-                  @click="handleSettleBalance(order.id)"
+                  @click.stop="handleSettleBalance(order.id)"
                   :disabled="settlingOrderId === order.id"
                   class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors disabled:opacity-50"
                   title="Settle remaining balance">
                   {{ settlingOrderId === order.id ? '…' : 'Settle' }}
                 </button>
-                <button @click="viewReceipt(order)"
+                <button @click.stop="viewReceipt(order)"
                   class="text-gray-400 dark:text-gray-500 hover:text-[#4DB6AC] dark:hover:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 p-2 rounded-lg transition-colors"
                   title="View Receipt">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -816,7 +831,7 @@ const receiptData = computed(() => {
 
     <!-- Modal -->
     <Teleport to="body">
-      <div v-if="isModalOpen" class="fixed inset-0 z-60 flex items-center justify-center p-4">
+      <div v-if="isModalOpen" class="fixed inset-0 z-60 flex items-center justify-center p-4 compact-text">
         <div @click="closeModal" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
 
         <div class="relative bg-white dark:bg-gray-800 w-full max-w-4xl rounded-lg shadow-2xl overflow-hidden transition-colors flex flex-col" style="height:90vh;max-height:680px">
@@ -1269,7 +1284,7 @@ const receiptData = computed(() => {
 
     <!-- VIEW ALL MODAL -->
     <Teleport to="body">
-      <div v-if="isViewAllModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div v-if="isViewAllModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 compact-text">
         <div @click="isViewAllModalOpen = false" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
         <div class="relative bg-gray-50 dark:bg-gray-900 w-full max-w-6xl h-[90vh] rounded-xl shadow-2xl flex flex-col animate-fade-in-up overflow-hidden border border-gray-200 dark:border-gray-700">
           <div class="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center shrink-0">
@@ -1285,40 +1300,48 @@ const receiptData = computed(() => {
               <input v-model="searchQuery" type="text" placeholder="Search by order # or customer…" class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4DB6AC] transition-colors" />
             </div>
           </div>
-          
-          <div class="flex-1 overflow-auto p-6">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
-              <table class="w-full text-left text-sm whitespace-nowrap">
+
+          <div class="flex-1 overflow-auto">
+            <div class="bg-white dark:bg-gray-800 overflow-hidden">
+              <table class="w-full text-left text-sm lg:whitespace-nowrap">
                 <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400">
                   <tr>
-                    <th class="p-4 font-medium tracking-wider">Date & Time</th>
-                    <th class="p-4 font-medium tracking-wider">Customer / Ref</th>
-                    <th class="p-4 font-medium tracking-wider">Items</th>
-                    <th class="p-4 font-medium tracking-wider">Total (Rp)</th>
+                    <th class="p-4 font-medium tracking-wider lg:hidden">ID</th>
+                    <th class="hidden lg:table-cell p-4 font-medium tracking-wider">Date & Time</th>
+                    <th class="p-4 font-medium tracking-wider lg:hidden">Price</th>
+                    <th class="hidden lg:table-cell p-4 font-medium tracking-wider">Customer</th>
+                    <th class="hidden lg:table-cell p-4 font-medium tracking-wider">Items</th>
+                    <th class="hidden lg:table-cell p-4 font-medium tracking-wider">Total (Rp)</th>
                     <th class="p-4 font-medium tracking-wider">Status</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
                   <tr v-for="order in filteredOrders" :key="order.id" @click="viewReceipt(order)"
                     class="hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-colors cursor-pointer group">
-                    <td class="p-4">
+                    <td class="p-4 lg:hidden">
+                      <div class="font-bold text-gray-800 dark:text-gray-200 font-mono text-xs">{{ order.orderNumber }}</div>
+                    </td>
+                    <td class="hidden lg:table-cell p-4">
                       <div class="font-medium text-gray-800 dark:text-gray-200">{{ formatDate(order.createdAt) }}</div>
                     </td>
-                    <td class="p-4">
+                    <td class="p-4 lg:hidden">
+                      <div class="font-bold text-gray-800 dark:text-gray-200">{{ fmtMoney(order.total) }}</div>
+                    </td>
+                    <td class="hidden lg:table-cell p-4">
                       <div class="flex items-center gap-3">
                         <div :class="[getAvatarColor(order.customerName || 'Walk-in'), 'w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs']">
                           {{ getInitials(order.customerName || 'W I') }}
                         </div>
                         <div>
                           <div class="font-medium text-gray-800 dark:text-gray-200">{{ order.customerName || 'Walk-in Customer' }}</div>
-                          <div class="text-xs text-gray-400 font-mono mt-0.5">#{{ order.id.substring(0, 8) }}</div>
+                          <div class="hidden lg:block text-xs text-gray-400 font-mono mt-0.5">#{{ order.id.substring(0, 8) }}</div>
                         </div>
                       </div>
                     </td>
-                    <td class="p-4 text-gray-600 dark:text-gray-400">
+                    <td class="hidden lg:table-cell p-4 text-gray-600 dark:text-gray-400">
                       {{ countItems(order.items) }} item(s)
                     </td>
-                    <td class="p-4">
+                    <td class="hidden lg:table-cell p-4">
                       <div class="font-bold text-gray-800 dark:text-gray-200">{{ fmtMoney(order.total) }}</div>
                     </td>
                     <td class="p-4">
@@ -1326,11 +1349,25 @@ const receiptData = computed(() => {
                         <span :class="getStatusColor(order.status)" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border border-transparent">
                           {{ order.status }}
                         </span>
+                        <span v-if="order.status === 'Return Due'"
+                          class="px-2 py-0.5 text-[9px] font-bold uppercase rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400">
+                          Balance {{ fmtMoney(order.remainingAmount) }}
+                        </span>
+                        <span v-else-if="order.paymentStatus === 'Partial'"
+                          class="px-2 py-0.5 text-[9px] font-bold uppercase rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                          Partial · {{ fmtMoney(order.remainingAmount) }} due
+                        </span>
+                        <span v-if="order.status === 'Active' && getRentalCountdown(order)"
+                          :class="getRentalCountdown(order).expired ? 'text-red-500 dark:text-red-400' : 'text-indigo-600 dark:text-indigo-400'"
+                          class="text-xs font-mono font-bold tabular-nums">
+                          ⏱ {{ getRentalCountdown(order).label }}
+                        </span>
                       </div>
                     </td>
                   </tr>
                   <tr v-if="filteredOrders.length === 0">
-                    <td colspan="5" class="p-8 text-center text-gray-500 dark:text-gray-400">No orders found.</td>
+                    <td colspan="3" class="p-8 text-center text-gray-500 dark:text-gray-400 lg:hidden">No orders found.</td>
+                    <td colspan="5" class="hidden lg:table-cell p-8 text-center text-gray-500 dark:text-gray-400">No orders found.</td>
                   </tr>
                 </tbody>
               </table>
@@ -1340,11 +1377,11 @@ const receiptData = computed(() => {
       </div>
     </Teleport>
 
-  <CustomerDetailModal :customerId="detailCustomerId" @close="detailCustomerId = null" />
+  <CustomerDetailModal :customerId="detailCustomerId" compact @close="detailCustomerId = null" />
 
   <!-- Collect Final Payment dialog (rental return due) -->
   <Teleport to="body">
-    <div v-if="collectOrder" class="fixed inset-0 z-200 flex items-center justify-center p-4">
+    <div v-if="collectOrder" class="fixed inset-0 z-200 flex items-center justify-center p-4 compact-text">
       <div @click="collectOrder = null" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
       <div class="relative bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
 
@@ -1402,7 +1439,7 @@ const receiptData = computed(() => {
 
   <!-- Service completion note dialog -->
   <Teleport to="body">
-    <div v-if="confirmingCompleteId" class="fixed inset-0 z-200 flex items-center justify-center p-4">
+    <div v-if="confirmingCompleteId" class="fixed inset-0 z-200 flex items-center justify-center p-4 compact-text">
       <div @click="confirmingCompleteId = null" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
       <div class="relative bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl p-6 border border-gray-100 dark:border-gray-700">
         <h3 class="font-bold text-gray-800 dark:text-white mb-1">Complete Service</h3>

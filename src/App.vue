@@ -84,8 +84,8 @@ const mobileSwitchProfile = () => {
 
       <div class="flex-1" />
 
-      <!-- Chat -->
-      <button @click="isChatOpen = !isChatOpen"
+      <!-- Chat toggle (hidden on mobile) -->
+      <!-- <button @click="isChatOpen = !isChatOpen"
         class="relative p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -94,7 +94,7 @@ const mobileSwitchProfile = () => {
           class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
           {{ chatStore.unreadCount > 9 ? '9+' : chatStore.unreadCount }}
         </span>
-      </button>
+      </button> -->
 
       <!-- Dark mode toggle -->
       <button @click="toggleDarkMode"
@@ -116,7 +116,7 @@ const mobileSwitchProfile = () => {
 
         <!-- Mobile profile dropdown -->
         <transition enter-active-class="transition duration-150 ease-out" enter-from-class="scale-95 opacity-0"
-kkkkk          enter-to-class="scale-100 opacity-100" leave-active-class="transition duration-100 ease-in"
+          enter-to-class="scale-100 opacity-100" leave-active-class="transition duration-100 ease-in"
           leave-from-class="scale-100 opacity-100" leave-to-class="scale-95 opacity-0">
           <div v-if="isMobileDropdownOpen"
             class="absolute right-0 top-10 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50">

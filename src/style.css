@@ -11,3 +11,21 @@ html, body, #app {
 body {
   font-family: "Plus Jakarta Sans", sans-serif;
 }
+
+/* Sales & Products: shrink every text size by 2px */
+.compact-text {
+  font-size: calc(1rem - 2px);
+  --text-xs: 0.625rem;   /* 10px (was 12px) */
+  --text-sm: 0.75rem;    /* 12px (was 14px) */
+  --text-base: 0.875rem; /* 14px (was 16px) */
+  --text-lg: 1rem;       /* 16px (was 18px) */
+  --text-xl: 1.125rem;   /* 18px (was 20px) */
+  --text-2xl: 1.375rem;  /* 22px (was 24px) */
+  --text-3xl: 1.75rem;   /* 28px (was 30px) */
+  --text-4xl: 2.125rem;  /* 34px (was 36px) */
+  --text-5xl: 2.875rem;  /* 46px (was 48px) */
+}
+
+.compact-text .text-\[9px\] { font-size: 7px; }
+.compact-text .text-\[10px\] { font-size: 8px; }
+.compact-text .text-\[11px\] { font-size: 9px; }

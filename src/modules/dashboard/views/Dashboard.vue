@@ -2,6 +2,9 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
 import { useDashboardAnalytics } from '../composables/useDashboardAnalytics'
+
+// Match the page's compact typography (default is 12px)
+Chart.defaults.font.size = 10
 import { useCurrency } from '../../../shared/composables/useCurrency'
 
 const {
@@ -126,7 +129,7 @@ const initCharts = () => {
         responsive: true, maintainAspectRatio: false,
         cutout: '65%',
         plugins: {
-          legend: { position: 'bottom', labels: { color: c.text, usePointStyle: true, pointStyleWidth: 8, padding: 12, font: { size: 11 } } }
+          legend: { position: 'bottom', labels: { color: c.text, usePointStyle: true, pointStyleWidth: 8, padding: 12, font: { size: 9 } } }
         }
       }
     })
@@ -151,7 +154,7 @@ const initCharts = () => {
         responsive: true, maintainAspectRatio: false,
         cutout: '65%',
         plugins: {
-          legend: { position: 'bottom', labels: { color: c.text, usePointStyle: true, pointStyleWidth: 8, padding: 12, font: { size: 11 } } }
+          legend: { position: 'bottom', labels: { color: c.text, usePointStyle: true, pointStyleWidth: 8, padding: 12, font: { size: 9 } } }
         }
       }
     })
@@ -202,7 +205,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="pb-12 space-y-10">
+  <section class="pb-12 space-y-8 compact-text">
 
     <!-- Header -->
     <header>
@@ -211,7 +214,7 @@ onUnmounted(() => {
     </header>
 
     <!-- ── KPI Cards ──────────────────────────────────────────────── -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
       <!-- Total Revenue -->
       <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 flex flex-col gap-3">
@@ -245,7 +248,7 @@ onUnmounted(() => {
     </div>
 
     <!-- ── Charts Row 1: Revenue vs Expenses + Daily Trend ────────── -->
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
       <!-- Revenue vs Expenses bar -->
       <div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
@@ -271,7 +274,7 @@ onUnmounted(() => {
     </div>
 
     <!-- ── Charts Row 2: Products + Order Status ─────────── -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
       <!-- Top Products donut -->
       <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">

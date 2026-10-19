@@ -26,27 +26,7 @@ const sortedProducts = computed(() => {
   })
 })
 
-const searchQuery = ref('')
-const typeFilter = ref('')
-const categoryFilter = ref('')
-
 const tableProducts = computed(() => sortedProducts.value.slice(0, 15))
-
-const activeCategoryFilters = computed(() => {
-  const used = new Set(productsStore.items.map(p => p.category).filter(Boolean))
-  return productCategories.value.filter(c => used.has(c))
-})
-
-const filteredProducts = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
-  const t = typeFilter.value
-  const c = categoryFilter.value
-  let list = sortedProducts.value
-  if (q) list = list.filter(p => (p.name || '').toLowerCase().includes(q))
-  if (t) list = list.filter(p => p.type === t)
-  if (c) list = list.filter(p => p.category === c)
-  return list
-})
 
 const products = computed(() => {
     return productsStore.items.map(item => {
@@ -263,7 +243,7 @@ const handleDelete = async () => {
 </script>
 
 <template>
-  <section class="space-y-12">
+  <section class="space-y-8 compact-text">
     <div>
       <header class="mb-6">
         <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Products Management</h2>
@@ -286,15 +266,21 @@ const handleDelete = async () => {
       </div>
 
 
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm overflow-x-auto border border-gray-100 dark:border-gray-700 transition-colors">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto border border-gray-100 dark:border-gray-700 transition-colors">
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="border-b border-gray-100 dark:border-gray-700">
-              <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Product Info</th>
-              <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Type</th>
-              <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Price ({{ currencySymbol }})</th>
+              <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <span class="lg:hidden">Product</span>
+                <span class="hidden lg:inline">Product Info</span>
+              </th>
+              <th class="hidden lg:table-cell p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Type</th>
+              <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <span class="lg:hidden">Price</span>
+                <span class="hidden lg:inline">Price ({{ currencySymbol }})</span>
+              </th>
               <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Availability</th>
-              <th class="p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-right">Actions</th>
+              <th class="hidden lg:table-cell p-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
@@ -315,7 +301,7 @@ const handleDelete = async () => {
                   </div>
                   <div>
                     <div class="font-bold text-gray-800 dark:text-white text-sm">{{ product.name }}</div>
-                    <div class="flex items-center gap-2 mt-0.5">
+                    <div class="hidden lg:flex items-center gap-2 mt-0.5">
                         <span class="text-xs text-gray-400 dark:text-gray-500 font-mono tracking-wide">SKU: {{ product.sku || 'N/A' }}</span>
                         <span v-if="product.category" class="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{{ product.category }}</span>
                     </div>
@@ -326,7 +312,7 @@ const handleDelete = async () => {
                 </div>
               </td>
 
-              <td class="p-4">
+              <td class="hidden lg:table-cell p-4">
                 <span :class="product.typeClass" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border border-transparent">
                   {{ product.type }}
                 </span>
@@ -355,7 +341,7 @@ const handleDelete = async () => {
                  </div>
               </td>
 
-              <td class="p-4 text-right">
+              <td class="hidden lg:table-cell p-4 text-right">
                   <button
                     @click.stop="openEditModal(product)"
                     class="text-[#004D40] dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 border border-transparent hover:border-teal-200 dark:hover:border-teal-800 font-bold text-xs py-1.5 px-3 rounded-lg transition-colors"
@@ -365,7 +351,10 @@ const handleDelete = async () => {
               </td>
             </tr>
             <tr v-if="tableProducts.length === 0">
-                <td colspan="5" class="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                <td colspan="3" class="p-8 text-center text-gray-500 dark:text-gray-400 text-sm lg:hidden">
+                    No products added yet.
+                </td>
+                <td colspan="5" class="hidden lg:table-cell p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
                     No products added yet.
                 </td>
             </tr>
@@ -375,7 +364,7 @@ const handleDelete = async () => {
     </div>
 
     <Teleport to="body">
-      <div v-if="isAddModalOpen" class="fixed inset-0 z-60 flex items-center justify-center p-4">
+      <div v-if="isAddModalOpen" class="fixed inset-0 z-60 flex items-center justify-center p-4 compact-text">
         <div @click="closeAddModal" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
         <div class="relative bg-white dark:bg-gray-800 w-full max-w-3xl rounded-lg shadow-2xl overflow-hidden animate-fade-in-up transition-colors">
             <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-teal-50 dark:bg-teal-900/20 flex justify-between items-center">
@@ -533,7 +522,7 @@ const handleDelete = async () => {
         </div>
       </div>
 
-      <div v-if="isEditModalOpen" class="fixed inset-0 z-60 flex items-center justify-center p-4">
+      <div v-if="isEditModalOpen" class="fixed inset-0 z-60 flex items-center justify-center p-4 compact-text">
         <div @click="closeEditModal" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
         <div class="relative bg-white dark:bg-gray-800 w-full max-w-3xl rounded-lg shadow-2xl overflow-hidden animate-fade-in-up transition-colors">
             <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-teal-50 dark:bg-teal-900/20 flex justify-between items-center">
@@ -695,7 +684,7 @@ const handleDelete = async () => {
 
     <!-- VIEW ALL MODAL -->
     <Teleport to="body">
-      <div v-if="isViewAllModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div v-if="isViewAllModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 compact-text">
         <div @click="isViewAllModalOpen = false" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
         <div class="relative bg-gray-50 dark:bg-gray-900 w-full max-w-6xl h-[90vh] rounded-xl shadow-2xl flex flex-col animate-fade-in-up overflow-hidden border border-gray-200 dark:border-gray-700">
           <div class="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center shrink-0">
@@ -705,47 +694,29 @@ const handleDelete = async () => {
             </div>
             <button @click="isViewAllModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-3xl font-bold leading-none">&times;</button>
           </div>
-          <div class="px-6 py-3 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shrink-0 space-y-2">
-            <!-- Search + Type row -->
-            <div class="flex gap-2">
-              <div class="relative flex-1">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                <input v-model="searchQuery" type="text" placeholder="Search by product name…" class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors" />
-              </div>
-              <select v-model="typeFilter" class="text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors">
-                <option value="">All Types</option>
-                <option value="Service">Service</option>
-                <option value="Rental">Rental</option>
-              </select>
-            </div>
-            <!-- Category filter chips -->
-            <div v-if="activeCategoryFilters.length > 0" class="flex flex-wrap gap-1.5">
-              <button @click="categoryFilter = ''"
-                :class="categoryFilter === '' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
-                class="px-3 py-1 rounded-full text-xs font-bold transition-colors">All Categories</button>
-              <button v-for="cat in activeCategoryFilters" :key="cat"
-                @click="categoryFilter = categoryFilter === cat ? '' : cat"
-                :class="categoryFilter === cat ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
-                class="px-3 py-1 rounded-full text-xs font-bold transition-colors">{{ cat }}</button>
-            </div>
-          </div>
-
-          <div class="flex-1 overflow-auto p-6">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
-              <table class="w-full text-left border-collapse">
+          <div class="flex-1 overflow-auto">
+            <div class="bg-white dark:bg-gray-800 overflow-hidden">
+              <table class="w-full text-left border-collapse lg:whitespace-nowrap">
                 <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 sticky top-0 z-10">
                   <tr class="border-b border-gray-100 dark:border-gray-700">
-                    <th class="p-4 text-xs font-bold uppercase tracking-wider">Product Info</th>
-                    <th class="p-4 text-xs font-bold uppercase tracking-wider">Type</th>
-                    <th class="p-4 text-xs font-bold uppercase tracking-wider">Price ({{ currencySymbol }})</th>
+                    <th class="p-4 text-xs font-bold uppercase tracking-wider">
+                      <span class="lg:hidden">Product</span>
+                      <span class="hidden lg:inline">Product Info</span>
+                    </th>
+                    <th class="hidden lg:table-cell p-4 text-xs font-bold uppercase tracking-wider">Type</th>
+                    <th class="p-4 text-xs font-bold uppercase tracking-wider">
+                      <span class="lg:hidden">Price</span>
+                      <span class="hidden lg:inline">Price ({{ currencySymbol }})</span>
+                    </th>
                     <th class="p-4 text-xs font-bold uppercase tracking-wider">Availability</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50 dark:divide-gray-700 align-top">
-                  <tr v-if="filteredProducts.length === 0">
-                    <td colspan="4" class="p-8 text-center text-gray-400 dark:text-gray-500">No products found.</td>
+                  <tr v-if="sortedProducts.length === 0">
+                    <td colspan="3" class="p-8 text-center text-gray-400 dark:text-gray-500 lg:hidden">No products found.</td>
+                    <td colspan="4" class="hidden lg:table-cell p-8 text-center text-gray-400 dark:text-gray-500">No products found.</td>
                   </tr>
-                  <tr v-for="item in filteredProducts" :key="item.id" @click="openEditModal(item)" class="hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer">
+                  <tr v-for="item in sortedProducts" :key="item.id" @click="openEditModal(item)" class="hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer">
                     <td class="p-4">
                       <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 shadow-sm flex items-center justify-center">
@@ -756,7 +727,7 @@ const handleDelete = async () => {
                         </div>
                         <div>
                           <div class="font-bold text-gray-800 dark:text-white text-sm">{{ item.name }}</div>
-                          <div class="flex items-center gap-2 mt-0.5">
+                          <div class="hidden lg:flex items-center gap-2 mt-0.5">
                               <span class="text-xs text-gray-400 dark:text-gray-500 font-mono tracking-wide">SKU: {{ item.sku || 'N/A' }}</span>
                               <span v-if="item.category" class="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">{{ item.category }}</span>
                           </div>
@@ -766,7 +737,7 @@ const handleDelete = async () => {
                         </div>
                       </div>
                     </td>
-                    <td class="p-4">
+                    <td class="hidden lg:table-cell p-4">
                       <span :class="item.typeClass" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border border-transparent">
                         {{ item.type }}
                       </span>

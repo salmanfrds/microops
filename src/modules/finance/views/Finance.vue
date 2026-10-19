@@ -352,8 +352,8 @@ const originLabel = (origin) => {
 </script>
 
 <template>
-  <section>
-    <header class="mb-8">
+  <section class="compact-text">
+    <header class="mb-6">
       <div>
         <h2 class="text-3xl font-bold text-gray-800 dark:text-white">Financial Overview</h2>
         <p class="mt-2 text-gray-600 dark:text-gray-400">Track your business cash flow — sales, stock, and manual entries.</p>
@@ -369,7 +369,7 @@ const originLabel = (origin) => {
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-5">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col transition-colors">
           <span class="text-gray-500 dark:text-gray-400 text-sm font-medium uppercase tracking-wider">Net Balance</span>
           <span :class="financeStore.totalBalance >= 0 ? 'text-gray-800 dark:text-white' : 'text-red-600 dark:text-red-400'"
@@ -394,7 +394,7 @@ const originLabel = (origin) => {
     </header>
 
     <!-- Expense breakdown by group -->
-    <div v-if="expenseBreakdown.length > 0" class="mt-6 mb-8">
+    <div v-if="expenseBreakdown.length > 0" class="mt-4 mb-6">
       <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Expense Breakdown</p>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
         <button v-for="g in expenseBreakdown" :key="g.group"
@@ -414,7 +414,7 @@ const originLabel = (origin) => {
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
       <!-- INCOME TABLE -->
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col transition-colors">
@@ -567,7 +567,7 @@ const originLabel = (origin) => {
 
     <!-- DETAIL MODAL -->
     <Teleport to="body">
-      <div v-if="selectedEntry" class="fixed inset-0 z-60 flex items-center justify-center p-4">
+      <div v-if="selectedEntry" class="fixed inset-0 z-60 flex items-center justify-center p-4 compact-text">
         <div @click="closeDetail" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
         <div class="relative bg-white dark:bg-gray-800 w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden">
 
@@ -666,7 +666,7 @@ const originLabel = (origin) => {
 
     <!-- MODAL -->
     <Teleport to="body">
-      <div v-if="activeModal" class="fixed inset-0 z-60 flex items-center justify-center p-4">
+      <div v-if="activeModal" class="fixed inset-0 z-60 flex items-center justify-center p-4 compact-text">
         <div @click="closeModal" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
 
         <div class="relative bg-white dark:bg-gray-800 w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden">
@@ -765,7 +765,7 @@ const originLabel = (origin) => {
 
     <!-- VIEW ALL MODAL -->
     <Teleport to="body">
-      <div v-if="viewAllType" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div v-if="viewAllType" class="fixed inset-0 z-50 flex items-center justify-center p-4 compact-text">
         <div @click="viewAllType = null" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
         <div class="relative bg-gray-50 dark:bg-gray-900 w-full max-w-4xl h-[90vh] rounded-xl shadow-2xl flex flex-col animate-fade-in-up overflow-hidden border border-gray-200 dark:border-gray-700">
           <!-- Header -->
@@ -849,7 +849,7 @@ const originLabel = (origin) => {
 
     <!-- PDF Export Dialog -->
     <Teleport to="body">
-      <div v-if="showExportDialog" class="fixed inset-0 z-60 flex items-center justify-center p-4">
+      <div v-if="showExportDialog" class="fixed inset-0 z-60 flex items-center justify-center p-4 compact-text">
         <div @click="showExportDialog = false" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"></div>
         <div class="relative bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl p-6 border border-gray-100 dark:border-gray-700">
           <h3 class="font-bold text-gray-800 dark:text-white text-lg mb-1">Export Financial Report</h3>

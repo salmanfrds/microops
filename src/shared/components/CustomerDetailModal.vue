@@ -7,7 +7,8 @@ import { useToastStore } from '../stores/toast'
 import { storage } from '../lib/firebaseClient'
 
 const props = defineProps({
-  customerId: { type: String, default: null }
+  customerId: { type: String, default: null },
+  compact: { type: Boolean, default: false },
 })
 const emit = defineEmits(['close'])
 
@@ -121,7 +122,7 @@ const docIcon = (type) => {
 
 <template>
   <Teleport to="body">
-    <div v-if="customerId" class="fixed inset-0 z-60 flex items-center justify-center p-4">
+    <div v-if="customerId" class="fixed inset-0 z-60 flex items-center justify-center p-4" :class="{ 'compact-text': compact }">
       <div @click="close" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
 
       <div class="relative bg-white dark:bg-gray-800 w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden animate-fade-in-up transition-colors">
