@@ -7,6 +7,8 @@ import Dashboard from '../../modules/dashboard/views/Dashboard.vue'
 import Sales from '../../modules/sales/views/Sales.vue'
 import Finance from '../../modules/finance/views/Finance.vue'
 import Products from '../../modules/products/views/Products.vue'
+import AddProduct from '../../modules/products/views/AddProduct.vue'
+import EditProduct from '../../modules/products/views/EditProduct.vue'
 import Customer from '../../modules/customer/views/Customer.vue'
 import Discounts from '../../modules/customer/views/Discounts.vue'
 import Profile from '../../modules/auth/views/Profile.vue'
@@ -48,6 +50,18 @@ const routes = [
         name: 'Products',
         component: Products,
         meta: { requireAuth: true, roles: ['Owner', 'Manager', 'Cashier'] }
+    },
+    {
+        path: '/products/new',
+        name: 'AddProduct',
+        component: AddProduct,
+        meta: { requireAuth: true, hideNavigation: true, roles: ['Owner', 'Manager', 'Cashier'] }
+    },
+    {
+        path: '/products/:id/edit',
+        name: 'EditProduct',
+        component: EditProduct,
+        meta: { requireAuth: true, hideNavigation: true, roles: ['Owner', 'Manager', 'Cashier'] }
     },
     {
         path: '/customer',
